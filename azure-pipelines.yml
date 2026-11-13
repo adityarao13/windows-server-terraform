@@ -1,0 +1,14 @@
+
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: 'windows-latest'
+
+steps:
+  - script: |
+      echo "GitHub repository connected successfully"
+      echo "Windows Server Terraform deployment pipeline"
+    displayName: 'Verify Pipeline Execution'
