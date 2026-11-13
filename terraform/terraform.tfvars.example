@@ -1,0 +1,9 @@
+subscription_id     = "3eba639d-d345-4de9-a2df-355fbb2ff3d0"
+location            = "Central India"
+resource_group_name = "rg-windows-terraform"
+vm_name             = "vm-windows-01"
+vm_size             = "Standard_B2s"
+admin_username      = "azureadmin"
+admin_password      = "Wind0wsazure"
+# Add your public IP /32 before enabling RDP.
+# admin_source_cidr = "YOUR-PUBLIC-IP/32"
