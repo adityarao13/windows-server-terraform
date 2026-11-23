@@ -1,14 +1,96 @@
-
 trigger:
   branches:
     include:
       - main
 
 pool:
-  vmImage: 'windows-latest'
+  vmImage: ubuntu-latest
 
-steps:
-  - script: |
-      echo "GitHub repository connected successfully"
-      echo "Windows Server Terraform deployment pipeline"
-    displayName: 'Verify Pipeline Execution'
+variables:
+  - group: vg-windows-terraform
+  - name: terraformVersion
+    value: '1.9.8'
+  - name: azureServiceConnection
+    value: 'Terraform_VM_Devops'
+  - name: terraformWorkingDirectory
+    value: '$(Build.SourcesDirectory)/terraform'
+
+stages:
+  - stage: ValidateAndPlan
+    displayName: 'Terraform Validate and Plan'
+
+    jobs:
+      - job: TerraformPlan
+        displayName: 'Terraform Plan'
+
+        steps:
+          - checkout: self
+
+          - task: Bash@3
+            displayName: 'Install Terraform'
+            inputs:
+              targetType: inline
+              script: |
+                set -euo pipefail
+
+                terraform_dir="$(Agent.ToolsDirectory)/terraform/$(terraformVersion)"
+                terraform_zip="$(Agent.TempDirectory)/terraform.zip"
+
+                mkdir -p "$terraform_dir"
+
+                echo "Downloading Terraform..."
+                curl -fsSL "https://releases.hashicorp.com/terraform/$(terraformVersion)/terraform_$(terraformVersion)_linux_amd64.zip" -o "$terraform_zip"
+
+                echo "Extracting Terraform..."
+                unzip -q -o "$terraform_zip" -d "$terraform_dir"
+
+                echo "Adding Terraform to PATH..."
+                echo "##vso[task.prependpath]$terraform_dir"
+
+                rm -f "$terraform_zip"
+
+                terraform version
+
+          - task: AzureCLI@2
+            displayName: 'Terraform Init, Validate and Plan'
+            inputs:
+              azureSubscription: '$(azureServiceConnection)'
+              scriptType: bash
+              scriptLocation: inlineScript
+              workingDirectory: '$(terraformWorkingDirectory)'
+              inlineScript: |
+                set -euo pipefail
+
+                export ARM_USE_CLI=true
+                export ARM_USE_AZUREAD=true
+
+                echo "Checking Azure authentication..."
+                az account show --query "{name:name,id:id}" -o table
+
+                echo "Initializing Terraform..."
+                terraform init -input=false
+
+                echo "Checking Terraform formatting..."
+                terraform fmt -check -recursive
+
+                echo "Validating Terraform configuration..."
+                terraform validate
+
+                echo "Generating Terraform plan..."
+                terraform plan \
+                  -input=false \
+                  -lock-timeout=5m \
+                  -out=tfplan
+
+                echo "Terraform plan generated successfully."
+
+            env:
+              TF_VAR_subscription_id: $(TF_VAR_subscription_id)
+              TF_VAR_admin_password: $(TF_VAR_admin_password)
+
+          - task: PublishPipelineArtifact@1
+            displayName: 'Publish Terraform Plan'
+            inputs:
+              targetPath: '$(terraformWorkingDirectory)/tfplan'
+              artifact: 'terraform-plan'
+              publishLocation: 'pipeline'
