@@ -44,11 +44,15 @@ stages:
                 echo "Extracting Terraform..."
                 unzip -q -o "$terraform_zip" -d "$terraform_dir"
 
+                chmod +x "$terraform_dir/terraform"
+
                 echo "Adding Terraform to PATH..."
+                export PATH="$terraform_dir:$PATH"
                 echo "##vso[task.prependpath]$terraform_dir"
 
                 rm -f "$terraform_zip"
 
+                echo "Verifying Terraform installation..."
                 terraform version
 
           - task: AzureCLI@2
