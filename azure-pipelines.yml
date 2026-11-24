@@ -1,3 +1,4 @@
+
 trigger:
   branches:
     include:
@@ -26,6 +27,7 @@ stages:
         steps:
           - checkout: self
 
+          # Step 1: Install Terraform
           - task: Bash@3
             displayName: 'Install Terraform'
             inputs:
@@ -55,28 +57,34 @@ stages:
                 echo "Verifying Terraform installation..."
                 terraform version
 
+          # Step 2: Authenticate and execute Terraform
           - task: AzureCLI@2
             displayName: 'Terraform Init, Validate and Plan'
             inputs:
-              addSpnToEnvironment: true
               azureSubscription: '$(azureServiceConnection)'
+              addSpnToEnvironment: true
               scriptType: bash
               scriptLocation: inlineScript
               workingDirectory: '$(terraformWorkingDirectory)'
+
               inlineScript: |
                 set -euo pipefail
 
                 echo "Configuring Terraform OIDC authentication..."
 
                 export ARM_USE_OIDC=true
+                export ARM_USE_CLI=false
                 export ARM_USE_AZUREAD=true
+
                 export ARM_CLIENT_ID="$servicePrincipalId"
+                export ARM_OIDC_TOKEN="$idToken"
                 export ARM_TENANT_ID="$tenantId"
                 export ARM_SUBSCRIPTION_ID="$(az account show --query id -o tsv)"
 
-                # Identify the Azure DevOps service connection for OIDC
                 export ARM_OIDC_AZURE_SERVICE_CONNECTION_ID="$AZURESUBSCRIPTION_SERVICE_CONNECTION_ID"
+                export ARM_ADO_PIPELINE_SERVICE_CONNECTION_ID="$AZURESUBSCRIPTION_SERVICE_CONNECTION_ID"
 
+                echo "Azure authentication configured."
                 echo "Checking Azure subscription..."
                 az account show --query "{name:name,id:id}" -o table
 
@@ -101,6 +109,7 @@ stages:
               TF_VAR_subscription_id: $(TF_VAR_subscription_id)
               TF_VAR_admin_password: $(TF_VAR_admin_password)
 
+          # Step 3: Publish Terraform Plan
           - task: PublishPipelineArtifact@1
             displayName: 'Publish Terraform Plan'
             inputs:
