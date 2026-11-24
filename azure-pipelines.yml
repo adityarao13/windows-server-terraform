@@ -88,6 +88,14 @@ stages:
                 echo "Checking Azure subscription..."
                 az account show --query "{name:name,id:id}" -o table
 
+                echo "Testing Terraform state storage access..."
+                az storage blob list \
+                  --account-name sttfstate158908 \
+                  --container-name tfstate \
+                  --auth-mode login \
+                  --num-results 1 \
+                  --output table
+
                 echo "Initializing Terraform..."
                 terraform init -input=false
 
