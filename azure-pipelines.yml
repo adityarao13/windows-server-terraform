@@ -88,7 +88,32 @@ stages:
                 echo "Checking Azure subscription..."
                 az account show --query "{name:name,id:id}" -o table
 
+                echo "Checking service principal identity..."
+
+                sp_object_id=$(az ad sp show \
+                  --id "$servicePrincipalId" \
+                  --query id \
+                  -o tsv)
+
+                az ad sp show \
+                  --id "$servicePrincipalId" \
+                  --query "{displayName:displayName, appId:appId, objectId:id}" \
+                  -o table
+
+                echo "Checking Storage Blob Data Contributor assignment..."
+
+                storage_scope="/subscriptions/3eba639d-d345-4de9-a2df-355fbb2ff3d0/resourceGroups/rg-terraform-state/providers/Microsoft.Storage/storageAccounts/sttfstate158908"
+
+                az role assignment list \
+                  --assignee "$sp_object_id" \
+                  --scope "$storage_scope" \
+                  --include-inherited \
+                  --all \
+                  --query "[?roleDefinitionName=='Storage Blob Data Contributor'].{Role:roleDefinitionName,Scope:scope,Principal:principalId}" \
+                  -o table
+
                 echo "Testing Terraform state storage access..."
+
                 az storage blob list \
                   --account-name sttfstate158908 \
                   --container-name tfstate \
