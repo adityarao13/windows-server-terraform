@@ -149,3 +149,4 @@ stages:
               targetPath: '$(terraformWorkingDirectory)/tfplan'
               artifact: 'terraform-plan'
               publishLocation: 'pipeline'
+#Add access to service connection for OIDC authentication              
