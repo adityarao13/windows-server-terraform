@@ -58,6 +58,7 @@ stages:
           - task: AzureCLI@2
             displayName: 'Terraform Init, Validate and Plan'
             inputs:
+              addSpnToEnvironment: true
               azureSubscription: '$(azureServiceConnection)'
               scriptType: bash
               scriptLocation: inlineScript
@@ -65,10 +66,18 @@ stages:
               inlineScript: |
                 set -euo pipefail
 
-                export ARM_USE_CLI=true
-                export ARM_USE_AZUREAD=true
+                echo "Configuring Terraform OIDC authentication..."
 
-                echo "Checking Azure authentication..."
+                export ARM_USE_OIDC=true
+                export ARM_USE_AZUREAD=true
+                export ARM_CLIENT_ID="$servicePrincipalId"
+                export ARM_TENANT_ID="$tenantId"
+                export ARM_SUBSCRIPTION_ID="$(az account show --query id -o tsv)"
+
+                # Identify the Azure DevOps service connection for OIDC
+                export ARM_OIDC_AZURE_SERVICE_CONNECTION_ID="$AZURESUBSCRIPTION_SERVICE_CONNECTION_ID"
+
+                echo "Checking Azure subscription..."
                 az account show --query "{name:name,id:id}" -o table
 
                 echo "Initializing Terraform..."
