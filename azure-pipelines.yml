@@ -108,7 +108,6 @@ stages:
                   --assignee "$sp_object_id" \
                   --scope "$storage_scope" \
                   --include-inherited \
-                  --all \
                   --query "[?roleDefinitionName=='Storage Blob Data Contributor'].{Role:roleDefinitionName,Scope:scope,Principal:principalId}" \
                   -o table
 
